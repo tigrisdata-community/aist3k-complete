@@ -1,19 +1,15 @@
 "use client";
 
-import { TigrisObject } from "@/app/lib/tigris";
+import { TigrisObject } from "@/lib/tigris";
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import listFiles from "@/app/actions/files";
 
 export default function VideoList() {
   const [videos, setVideos] = useState<TigrisObject[] | null>(null);
 
   useEffect(() => {
-    fetch("/api/files")
-      .then((response) => response.json() as Promise<TigrisObject[]>)
-      .then((response) =>
-        response.filter((file: TigrisObject) => file.key.endsWith(".mp4"))
-      )
-      .then((videos) => setVideos(videos));
+    listFiles().then((videos) => setVideos(videos));
   }, []);
 
   if (videos === null) {
@@ -34,30 +30,34 @@ export default function VideoList() {
             </p>
           </div>
           <ul className="grid gap-2 py-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-2">
-            {videos.map((f, index) => {
-              return (
-                <li key={f.key} className="flex flex-col items-center gap-2">
-                  <Link
-                    className="text-lg font-medium hover:underline underline-offset-4 text-white"
-                    href={{
-                      pathname: "/files/play",
-                      query: {
-                        name: f.key,
-                      },
-                    }}
-                  >
-                    <img
-                      alt={`Video ${index}`}
-                      className="w-full aspect-[16/9] object-cover rounded-lg"
-                      height="200"
-                      src="https://placehold.co/1280x720"
-                      width="350"
-                    />
-                    {f.displayName}
-                  </Link>
-                </li>
-              );
-            })}
+            {videos === null ? (
+              <>Loading...</>
+            ) : (
+              videos.map((f, index) => {
+                return (
+                  <li key={f.key} className="flex flex-col items-center gap-2">
+                    <Link
+                      className="text-lg font-medium hover:underline underline-offset-4 text-white"
+                      href={{
+                        pathname: "/files/play",
+                        query: {
+                          name: f.key,
+                        },
+                      }}
+                    >
+                      <img
+                        alt={`Video ${index}`}
+                        className="w-full aspect-[16/9] object-cover rounded-lg"
+                        height="200"
+                        src="https://placehold.co/1280x720"
+                        width="350"
+                      />
+                      {f.displayName}
+                    </Link>
+                  </li>
+                );
+              })
+            )}
           </ul>
         </div>
       </div>

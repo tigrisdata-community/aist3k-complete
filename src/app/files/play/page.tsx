@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -5,6 +7,8 @@ import {
   fetchAndPlayTextToSpeech,
 } from "@/app/actions";
 import Button from "@/components/Button";
+import serverDescribeVideo from "@/app/actions/describeVideo";
+import { serve } from "inngest/astro";
 
 export interface PageParams {
   searchParams: {
@@ -20,7 +24,7 @@ export default function Page({ searchParams }: PageParams) {
   const [isAudioPlaying, setIsAudioPlaying] = useState<boolean>(false);
   const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement>();
   const [models, setModels] = useState<string[]>([]);
-  const [selectedModel, setSelectedModel] = useState<string | null>();
+  const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [eventSource, setEventSource] = useState<any>(null);
   const initialized = useRef(false);
 
@@ -56,18 +60,16 @@ export default function Page({ searchParams }: PageParams) {
 
   useEffect(() => {
     const doer = () => {
-      listOllamaVisionModels().then(setModels);
+      listOllamaVisionModels().then((models) => {
+        setModels(models);
+        if (selectedModel === null && models.length > 0) {
+          setSelectedModel(models[0]);
+        }
+      });
     };
     const intervalId = setInterval(doer, 5000);
     return () => clearInterval(intervalId);
   }, []);
-
-  useEffect(() => {
-    if (selectedModel === null && models.length > 0) {
-      setSelectedModel(models[0]);
-    }
-    console.log(`Selected model ${selectedModel}`);
-  }, [selectedModel, models]);
 
   useEffect(() => {
     if (currentAudio) {
@@ -139,13 +141,10 @@ export default function Page({ searchParams }: PageParams) {
   async function describeVideo() {
     setShowSpinner(true);
     setNarration([]);
-    await fetch(`/api/describeVideo`, {
-      method: "POST",
-      body: JSON.stringify({
-        url: videoUrl,
-        key: searchParams.name,
-        modelName: selectedModel,
-      }),
+    await serverDescribeVideo({
+      url: videoUrl,
+      key: searchParams.name,
+      modelName: selectedModel || "llava",
     });
   }
 
@@ -243,21 +242,19 @@ export default function Page({ searchParams }: PageParams) {
                   </video>
 
                   <div className="flex justify-center space-x-4 my-4">
-                    {!!!inferencePlatform.startsWith("OpenAI") && (
-                      <select
-                        className="justify-left"
-                        value={selectedModel}
-                        onChange={(e) => setSelectedModel(e.target.value)}
-                      >
-                        {models.map((model) => {
-                          return (
-                            <option key={model} value={model}>
-                              {model}
-                            </option>
-                          );
-                        })}
-                      </select>
-                    )}
+                    <select
+                      className="justify-left"
+                      value={selectedModel || ""}
+                      onChange={(e) => setSelectedModel(e.target.value)}
+                    >
+                      {models.map((model) => {
+                        return (
+                          <option key={model} value={model}>
+                            {model}
+                          </option>
+                        );
+                      })}
+                    </select>
 
                     <Button
                       className="bg-black text-white"
