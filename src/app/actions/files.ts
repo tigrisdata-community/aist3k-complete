@@ -5,12 +5,6 @@ import { TigrisObject } from '@/lib/tigris';
 
 const client = new S3Client();
 
-export type FilesResponse = Array<TigrisObject>;
-
-export interface ErrorMessage {
-  message: string;
-}
-
 export default async function listFiles(): Promise<TigrisObject[]> {
   const listObjectsV2Command = new ListObjectsV2Command(
     { Bucket: process.env.NEXT_PUBLIC_BUCKET_NAME });

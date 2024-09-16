@@ -8,7 +8,7 @@ import {
 } from "@/app/actions";
 import Button from "@/components/Button";
 import serverDescribeVideo from "@/app/actions/describeVideo";
-import { serve } from "inngest/astro";
+import describeFrame from "@/app/actions/describeFrame";
 
 export interface PageParams {
   searchParams: {
@@ -26,7 +26,11 @@ export default function Page({ searchParams }: PageParams) {
   const [models, setModels] = useState<string[]>([]);
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [eventSource, setEventSource] = useState<any>(null);
+
   const initialized = useRef(false);
+
+  const vidRef = useRef<HTMLVideoElement>(null);
+  const canRef = useRef<HTMLCanvasElement>(null);
 
   const connectToStream = useCallback(() => {
     const eventSource = new EventSource("/api/stream");
@@ -105,9 +109,6 @@ export default function Page({ searchParams }: PageParams) {
       })(audioUrl);
     }
   }, [narration, eventSource, audioQueue, isAudioPlaying, connectToStream]);
-
-  const vidRef = useRef<HTMLVideoElement>(null);
-  const canRef = useRef<HTMLCanvasElement>(null);
 
   async function pAudio(url: string) {
     setIsAudioPlaying(true);
@@ -194,18 +195,14 @@ export default function Page({ searchParams }: PageParams) {
         });
       }
 
-      fetch(`/api/describe`, {
-        method: "POST",
-        body: JSON.stringify({
-          frames: dataURLs,
-          modelName: selectedModel,
-        }),
+      describeFrame({
+        frames: dataURLs,
+        modelName: selectedModel!,
       }).then(async (response) => {
         setShowSpinner(false);
         vidRef.current!.play();
-        const restext = await response.text();
-        setNarration([restext]);
-        await queueAudio(restext.split("COLLAGE_URL:")[0]);
+        setNarration([response]);
+        await queueAudio(response.split("COLLAGE_URL:")[0]);
       });
     }
   }

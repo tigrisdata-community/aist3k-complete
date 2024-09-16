@@ -13,8 +13,6 @@ import ffmpeg from "fluent-ffmpeg";
 import fs from "fs";
 import path from "path";
 import sharp from "sharp";
-import { Readable } from "stream";
-import { ReadableStream } from "stream/web";
 
 const client = new S3Client();
 export const ollama = new Ollama({
@@ -303,22 +301,6 @@ export async function fetchLatestFromTigris() {
   return url;
 }
 
-function isValidLLMOutput(output: string): boolean {
-  try {
-    const data: LLMOutput = JSON.parse(output);
-
-    // Check if the required fields are present and are of type string
-    if (typeof data.detected === "string" && typeof data.comment === "string") {
-      return true;
-    }
-    return false;
-  } catch (e) {
-    // If JSON parsing fails or any other error occurs
-    console.error(e);
-    return false;
-  }
-}
-
 export async function toBase64ImageUrl(
   imgUrl: string
 ): Promise<string> {
@@ -328,6 +310,12 @@ export async function toBase64ImageUrl(
   const toBase64 = `${Buffer.from(responseArrBuffer).toString("base64")}`;
   return toBase64;
 }
+
+const prompt = (context: string) => `These are frames from an old movie with one or more pictures. 
+Generate a funny description of the image or a sequence of images. Make your narrative continuous and natural based on what you have said before. Really roast the movie.
+Previously you have described other frames from the same video, here is what you said: ${context}. 
+
+Make your description unique and not repetitive please!. Also, please keep it to only a few sentences.`;
 
 export async function describeImageForVideo(
   url: string,
@@ -341,19 +329,8 @@ export async function describeImageForVideo(
 
   const systemPrompt = {
     role: "system",
-    content: `
-      You are a a professional comedian. One of the funniest people in the world. You're known for deeply intellectual comedy that's hilarious but also interesting.
-      `,
+    content: `You are a a professional comedian. One of the funniest people in the world. You're known for deeply intellectual comedy that's hilarious but also interesting.`,
   };
-
-  const prompt = `These are frames from an old movie with one or more pictures. 
-  Generate a funny description of the image or a sequence of images. Make your narrative continuous and natural based on what you have said before. Really roast the movie.
-  Previously you have described other frames from the same video, here is what you said: ${context}. 
-  
-  Make your description unique and not repetitive please!. Also, please keep it to only a few sentances.
-
-  "`;
-
 
   console.log("Ollama Model: ", modelName);
   const response = await ollama.chat({
@@ -362,7 +339,7 @@ export async function describeImageForVideo(
       systemPrompt,
       {
         role: "user",
-        content: prompt,
+        content: prompt(context),
         images: [await toBase64ImageUrl(url)],
       },
     ],
