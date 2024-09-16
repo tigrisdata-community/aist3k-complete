@@ -21,6 +21,7 @@ function removeQuotesAndNewlines(str: string) {
 export async function listOllamaVisionModels() {
   return ollama.list()
     .then((list) => list.models)
+    // CLIP == vision, it's the name of the paper that describes the vision model paradigm we use
     .then((models) => models.filter(m => m.details.families && m.details.families.includes("clip")))
     .then((models) => models.map(m => m.name))
 }
