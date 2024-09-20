@@ -149,64 +149,6 @@ export default function Page({ searchParams }: PageParams) {
     });
   }
 
-  function calculateCaptureTimes(
-    currentTime: number,
-    interval: number,
-    countBefore: number, // # of frames before current time
-    countAfter: number // # of frames after current time
-  ): number[] {
-    const times = [];
-    if (currentTime < interval) {
-      // reset interval to be a reasonable slice if currentTime is too small
-      interval = currentTime / Math.ceil(countBefore + countAfter + 1);
-    }
-
-    const startTime = Math.max(currentTime - countBefore * interval, 0); // start time should not be negative
-
-    for (let i = 0; i < countBefore + countAfter + 1; i++) {
-      const time = startTime + i * interval;
-      if (time >= currentTime - countBefore * interval) {
-        times.push(time);
-      }
-    }
-
-    return times;
-  }
-
-  async function captureFrame() {
-    if (canRef.current && vidRef.current) {
-      setShowSpinner(true);
-      vidRef.current.pause();
-      const context = canRef.current.getContext("2d")!;
-      const currentTime = vidRef.current.currentTime;
-      const captureTimes = calculateCaptureTimes(currentTime, 10, 5, 0);
-      console.log("captureTimes", captureTimes);
-      let dataURLs: string[] = [];
-      for (const time of captureTimes) {
-        vidRef.current.currentTime = time;
-        await new Promise((resolve) => {
-          vidRef.current!.addEventListener("seeked", function onSeeked() {
-            context.drawImage(vidRef.current!, 0, 0, 640, 400);
-            const dataURL = canRef.current!.toDataURL("image/jpeg", 1);
-            dataURLs.push(dataURL);
-            vidRef.current!.removeEventListener("seeked", onSeeked);
-            resolve("done");
-          });
-        });
-      }
-
-      describeFrame({
-        frames: dataURLs,
-        modelName: selectedModel!,
-      }).then(async (response) => {
-        setShowSpinner(false);
-        vidRef.current!.play();
-        setNarration([response]);
-        await queueAudio(response.split("COLLAGE_URL:")[0]);
-      });
-    }
-  }
-
   return (
     <>
       <section className="flex min-h-screen justify-center items-center w-full bg-gradient-to-r from-purple-400 via-pink-500 to-red-500">
@@ -252,14 +194,6 @@ export default function Page({ searchParams }: PageParams) {
                         );
                       })}
                     </select>
-
-                    <Button
-                      className="bg-black text-white"
-                      onClick={captureFrame}
-                      disabled={showSpinner}
-                    >
-                      Capture
-                    </Button>
                     <Button
                       className="bg-black text-white"
                       onClick={describeVideo}
